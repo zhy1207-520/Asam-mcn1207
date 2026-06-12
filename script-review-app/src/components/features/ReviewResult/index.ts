@@ -1,0 +1,1 @@
+export { ReviewResultView } from './ReviewResult';

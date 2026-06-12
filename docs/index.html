@@ -145,7 +145,35 @@
     .change-detail .new { color: var(--green); font-weight: 500; }
     .change-reason { font-size: 11px; color: var(--text3); }
 
+    /* Compliance */
     .compliance-box { background: #F0F8FF; border-left: 4px solid var(--blue); padding: 14px; border-radius: 0 var(--radius) var(--radius) 0; margin: 14px 0; font-size: 13px; color: #1565C0; }
+
+    /* AI Settings */
+    .ai-settings-toggle { position: fixed; bottom: 20px; right: 20px; width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; border: none; font-size: 22px; cursor: pointer; box-shadow: 0 4px 16px rgba(102,126,234,0.4); z-index: 100; display: flex; align-items: center; justify-content: center; }
+    .ai-settings-toggle:active { transform: scale(0.95); }
+    .ai-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; display: none; align-items: center; justify-content: center; }
+    .ai-modal-overlay.show { display: flex; }
+    .ai-modal { background: #fff; border-radius: 16px; padding: 24px; width: 90%; max-width: 400px; max-height: 80vh; overflow-y: auto; }
+    .ai-modal h3 { font-size: 18px; margin-bottom: 6px; }
+    .ai-modal .sub { font-size: 12px; color: var(--text3); margin-bottom: 16px; }
+    .ai-modal label { font-size: 13px; font-weight: 500; display: block; margin-bottom: 6px; margin-top: 14px; }
+    .ai-modal select, .ai-modal input { width: 100%; height: 40px; border: 2px solid var(--border); border-radius: 8px; padding: 0 10px; font-size: 14px; outline: none; margin-bottom: 8px; }
+    .ai-modal select:focus, .ai-modal input:focus { border-color: #667eea; }
+    .ai-modal .hint { font-size: 11px; color: var(--text3); line-height: 1.5; }
+    .ai-modal .hint a { color: #667eea; }
+    .ai-modal .btn-row { display: flex; gap: 10px; margin-top: 20px; }
+    .ai-modal .btn-row .btn { flex: 1; font-size: 14px; padding: 10px 0; }
+
+    .ai-result-card { background: linear-gradient(135deg, #F5F0FF, #EDE7F6); border: 2px solid #D1C4E9; }
+    .ai-loading { display: flex; flex-direction: column; align-items: center; padding: 30px; }
+    .ai-loading .dot-pulse { display: flex; gap: 8px; margin-bottom: 12px; }
+    .ai-loading .dot-pulse span { width: 10px; height: 10px; border-radius: 50%; background: #7C4DFF; animation: dotBounce 1.4s infinite ease-in-out both; }
+    .ai-loading .dot-pulse span:nth-child(1) { animation-delay: -0.32s; }
+    .ai-loading .dot-pulse span:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes dotBounce { 0%,80%,100% { transform: scale(0); } 40% { transform: scale(1); } }
+    .ai-loading p { font-size: 13px; color: #7C4DFF; }
+
+    .ai-badge { display: inline-block; background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-left: 6px; vertical-align: middle; }
 
     /* Loading spinner */
     .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 8px; }
@@ -299,13 +327,27 @@
 
       <div class="tab-bar">
         <button class="tab-btn active" onclick="switchTab('original')">原始脚本</button>
-        <button class="tab-btn" onclick="switchTab('optimized')">优化后脚本</button>
+        <button class="tab-btn" onclick="switchTab('optimized')">规则优化</button>
+        <button class="tab-btn" id="tab-ai" onclick="switchTab('ai')">AI 优化<span class="ai-badge">NEW</span></button>
       </div>
       <div class="script-box" id="script-display"></div>
+
+      <div id="ai-result-area" style="display:none;">
+        <div class="card ai-result-card" style="margin-top:14px;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+            <span style="font-size:16px;">🤖</span>
+            <span style="font-weight:600;font-size:14px;">AI 优化说明</span>
+          </div>
+          <p id="ai-note" style="font-size:13px;color:#555;line-height:1.6;"></p>
+        </div>
+      </div>
 
       <div id="compliance-note"></div>
 
       <div style="display:flex;flex-direction:column;gap:10px;padding:20px 0 40px;">
+        <button class="btn btn-primary" id="btn-ai-optimize" onclick="aiOptimize()" style="font-size:16px;background:linear-gradient(135deg,#667eea,#764ba2);">
+          🤖 AI 智能优化
+        </button>
         <button class="btn btn-primary" onclick="copyOptimized()" style="font-size:16px;">📋 复制优化脚本</button>
         <button class="btn btn-secondary" onclick="goTo('editor')">重新编辑</button>
       </div>
@@ -314,6 +356,32 @@
 
   <!-- Toast -->
   <div class="toast" id="toast"></div>
+
+  <!-- AI Settings Toggle -->
+  <button class="ai-settings-toggle" onclick="toggleAISettings()" title="AI 优化设置">🤖</button>
+
+  <!-- AI Settings Modal -->
+  <div class="ai-modal-overlay" id="ai-modal-overlay">
+    <div class="ai-modal">
+      <h3>🤖 AI 智能优化设置</h3>
+      <p class="sub">接入 AI 模型对脚本进行智能润色优化</p>
+      <label>AI 服务商</label>
+      <select id="ai-provider" onchange="onAIProviderChange()">
+        <option value="deepseek">DeepSeek（推荐，中文优化好）</option>
+        <option value="openai">OpenAI (GPT-4o-mini)</option>
+        <option value="groq">Groq (Llama 3.3, 免费)</option>
+      </select>
+      <label>API Key</label>
+      <input type="password" id="ai-api-key" placeholder="请输入 API Key" />
+      <p class="hint" id="ai-key-hint">
+        <a href="https://platform.deepseek.com/api_keys" target="_blank">获取 DeepSeek API Key（新用户送 500 万 tokens）</a>
+      </p>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="toggleAISettings()">取消</button>
+        <button class="btn btn-primary" onclick="saveAISettings()" style="background:linear-gradient(135deg,#667eea,#764ba2);">保存设置</button>
+      </div>
+    </div>
+  </div>
 
   <script>
     // ====== STATE ======
@@ -325,7 +393,11 @@
       reviewResult: null,
       optimizeResult: null,
       originalScript: '',
-      activeTab: 'optimized'
+      activeTab: 'optimized',
+      aiResult: null,
+      aiLoading: false,
+      aiApiKey: localStorage.getItem('ai_api_key') || '',
+      aiProvider: localStorage.getItem('ai_provider') || 'deepseek'
     };
 
     // ====== NAVIGATION ======
@@ -613,25 +685,216 @@
     function switchTab(tab) {
       STATE.activeTab = tab;
       document.querySelectorAll('.tab-btn').forEach((b, i) => {
-        b.classList.toggle('active', (i === 0 && tab === 'original') || (i === 1 && tab === 'optimized'));
+        b.classList.toggle('active', (i === 0 && tab === 'original') || (i === 1 && tab === 'optimized') || (i === 2 && tab === 'ai'));
       });
+      document.getElementById('ai-result-area').style.display = tab === 'ai' ? 'block' : 'none';
+      document.getElementById('compliance-note').style.display = tab === 'ai' ? 'none' : '';
       updateScriptDisplay();
     }
 
     function updateScriptDisplay() {
       const o = STATE.optimizeResult;
       const display = document.getElementById('script-display');
-      const script = STATE.activeTab === 'original' ? o.originalScript : o.optimizedScript;
-      display.className = 'script-box' + (STATE.activeTab === 'optimized' ? ' optimized' : '');
+      let script;
+      if (STATE.activeTab === 'original') {
+        script = o.originalScript;
+        display.className = 'script-box';
+      } else if (STATE.activeTab === 'ai') {
+        script = STATE.aiResult ? STATE.aiResult.optimizedScript : '请先点击「AI 智能优化」按钮生成 AI 优化版本';
+        display.className = 'script-box optimized';
+      } else {
+        script = o.optimizedScript;
+        display.className = 'script-box optimized';
+      }
       display.textContent = script;
     }
 
     function copyOptimized() {
-      const script = STATE.optimizeResult?.optimizedScript;
+      let script;
+      if (STATE.activeTab === 'ai' && STATE.aiResult) {
+        script = STATE.aiResult.optimizedScript;
+      } else {
+        script = STATE.optimizeResult?.optimizedScript;
+      }
       if (!script?.trim()) { showToast('脚本内容为空'); return; }
       navigator.clipboard.writeText(script).then(() => {
         showToast('已复制到剪贴板，可直接粘贴使用');
       }).catch(() => showToast('复制失败，请手动选择复制'));
+    }
+
+    // ====== AI SETTINGS ======
+    function toggleAISettings() {
+      const overlay = document.getElementById('ai-modal-overlay');
+      const isOpen = overlay.classList.contains('show');
+      if (isOpen) {
+        overlay.classList.remove('show');
+      } else {
+        document.getElementById('ai-api-key').value = STATE.aiApiKey;
+        document.getElementById('ai-provider').value = STATE.aiProvider;
+        onAIProviderChange();
+        overlay.classList.add('show');
+      }
+    }
+
+    function onAIProviderChange() {
+      const p = document.getElementById('ai-provider').value;
+      const hint = document.getElementById('ai-key-hint');
+      const hints = {
+        deepseek: '<a href="https://platform.deepseek.com/api_keys" target="_blank">获取 DeepSeek API Key（新用户送 500 万 tokens）</a>',
+        openai: '<a href="https://platform.openai.com/api-keys" target="_blank">获取 OpenAI API Key</a>',
+        groq: '<a href="https://console.groq.com/keys" target="_blank">获取 Groq API Key（免费额度）</a>'
+      };
+      hint.innerHTML = hints[p] || hints.deepseek;
+    }
+
+    function saveAISettings() {
+      STATE.aiApiKey = document.getElementById('ai-api-key').value.trim();
+      STATE.aiProvider = document.getElementById('ai-provider').value;
+      localStorage.setItem('ai_api_key', STATE.aiApiKey);
+      localStorage.setItem('ai_provider', STATE.aiProvider);
+      document.getElementById('ai-modal-overlay').classList.remove('show');
+      showToast(STATE.aiApiKey ? 'AI 设置已保存 ✅' : 'AI 设置已清除');
+    }
+
+    // Close modal on overlay click
+    document.getElementById('ai-modal-overlay').addEventListener('click', function(e) {
+      if (e.target === this) toggleAISettings();
+    });
+
+    // ====== AI OPTIMIZE ======
+    async function aiOptimize() {
+      if (!STATE.aiApiKey) {
+        toggleAISettings();
+        showToast('请先配置 AI API Key');
+        return;
+      }
+
+      const script = STATE.originalScript;
+      if (!script) { showToast('脚本内容为空'); return; }
+
+      const btn = document.getElementById('btn-ai-optimize');
+      const origText = btn.innerHTML;
+      btn.innerHTML = '<span class="spinner"></span>AI 优化中...';
+      btn.disabled = true;
+      STATE.aiLoading = true;
+
+      // Show loading in display
+      const display = document.getElementById('script-display');
+      display.className = 'script-box';
+      display.innerHTML = '<div class="ai-loading"><div class="dot-pulse"><span></span><span></span><span></span></div><p>AI 正在分析并优化脚本...</p></div>';
+
+      STATE.activeTab = 'ai';
+      document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', i === 2));
+      document.getElementById('ai-result-area').style.display = 'block';
+      document.getElementById('compliance-note').style.display = 'none';
+
+      try {
+        // Try backend proxy first, then direct API
+        let result;
+        const proxyUrl = '/api/ai/optimize';
+        const directUrls = {
+          deepseek: 'https://api.deepseek.com/chat/completions',
+          openai: 'https://api.openai.com/v1/chat/completions',
+          groq: 'https://api.groq.com/openai/v1/chat/completions'
+        };
+
+        // Try backend proxy
+        try {
+          const res = await fetch(proxyUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              script,
+              violations: STATE.reviewResult?.violations || [],
+              suggestions: STATE.reviewResult?.suggestions || [],
+              apiKey: STATE.aiApiKey,
+              provider: STATE.aiProvider
+            })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success) { result = data.data; }
+          }
+        } catch (e) { /* proxy failed, try direct */ }
+
+        // Fallback: direct API call
+        if (!result) {
+          const provider = STATE.aiProvider;
+          const models = { deepseek: 'deepseek-chat', openai: 'gpt-4o-mini', groq: 'llama-3.3-70b-versatile' };
+          const apiUrl = directUrls[provider] || directUrls.deepseek;
+          const model = models[provider] || models.deepseek;
+
+          const violationInfo = (STATE.reviewResult?.violations || []).map(v => `- ${v.message}`).join('\n');
+          const suggestionInfo = (STATE.reviewResult?.suggestions || []).map(s => `- ${s.message}`).join('\n');
+
+          const directRes = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${STATE.aiApiKey}`
+            },
+            body: JSON.stringify({
+              model,
+              messages: [
+                { role: 'system', content: `你是视频号脚本优化专家，精通微信视频号运营规范。请优化用户脚本：去除诱导用语、绝对化用语、敏感词、夸张标题，保持原风格和结构。输出格式：【优化后脚本】内容【/优化后脚本】【优化说明】说明【/优化说明】` },
+                { role: 'user', content: `违规项：\n${violationInfo || '无'}\n\n建议：\n${suggestionInfo || '无'}\n\n原脚本：\n${script}` }
+              ],
+              temperature: 0.7,
+              max_tokens: 4096
+            })
+          });
+
+          if (!directRes.ok) {
+            const err = await directRes.json().catch(() => ({}));
+            if (err.error?.message?.includes('Insufficient Balance')) throw new Error('AI 账户余额不足，请充值');
+            if (err.error?.message?.includes('invalid')) throw new Error('API Key 无效，请检查');
+            throw new Error('AI 调用失败: ' + (err.error?.message || directRes.statusText));
+          }
+
+          const data = await directRes.json();
+          const aiText = data.choices?.[0]?.message?.content || '';
+          const sMatch = aiText.match(/【优化后脚本】([\s\S]*?)【\/优化后脚本】/);
+          const nMatch = aiText.match(/【优化说明】([\s\S]*?)【\/优化说明】/);
+
+          result = {
+            optimizedScript: sMatch ? sMatch[1].trim() : aiText,
+            aiNote: nMatch ? nMatch[1].trim() : 'AI 已根据平台规则完成优化',
+            provider: provider,
+            model
+          };
+        }
+
+        STATE.aiResult = result;
+        updateScriptDisplay();
+        document.getElementById('ai-note').textContent = result.aiNote;
+
+        const warning = document.getElementById('compliance-note');
+        warning.style.display = 'block';
+        warning.innerHTML = `<div class="compliance-box" style="border-left-color:#7C4DFF;background:#F5F0FF;color:#4A148C;">
+          🤖 <b>AI 优化完成</b>（${result.provider} / ${result.model}）<br>已根据平台规则智能重写，去除违规内容并润色表达。
+        </div>`;
+
+      } catch (e) {
+        display.innerHTML = `<div style="text-align:center;padding:40px 20px;color:#999;">
+          <div style="font-size:40px;margin-bottom:12px;">😞</div>
+          <p style="font-size:14px;color:#666;margin-bottom:8px;">AI 优化失败</p>
+          <p style="font-size:12px;">${e.message}</p>
+          <button class="btn btn-outline" onclick="toggleAISettings()" style="margin-top:16px;width:auto;display:inline-block;padding:8px 20px;">检查 AI 设置</button>
+        </div>`;
+        document.getElementById('ai-result-area').style.display = 'none';
+        showToast('AI 优化失败，请检查 API Key');
+      } finally {
+        btn.innerHTML = origText;
+        btn.disabled = false;
+        STATE.aiLoading = false;
+      }
+    }
+
+    // Initialize AI settings from storage
+    if (STATE.aiApiKey) {
+      document.getElementById('ai-api-key').value = STATE.aiApiKey;
+      document.getElementById('ai-provider').value = STATE.aiProvider;
+      onAIProviderChange();
     }
 
     // ====== LOCAL FALLBACK ENGINE ======

@@ -308,6 +308,15 @@
       <div class="card" id="warnings-card"></div>
       <div class="card" id="suggestions-card"></div>
       <div class="card" id="sensitive-words-card"></div>
+      <div class="card" id="ai-review-card" style="display:none;background:linear-gradient(135deg,#F5F0FF,#EDE7F6);border:2px solid #D1C4E9;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;">
+          <span style="font-size:18px;">🤖</span>
+          <span style="font-weight:600;font-size:15px;">DeepSeek AI 深度分析</span>
+          <span class="ai-badge">基于30条规则</span>
+        </div>
+        <div id="ai-review-content" style="font-size:13px;color:#555;line-height:1.7;white-space:pre-wrap;"></div>
+        <div id="ai-review-footer" style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(102,126,234,0.2);font-size:13px;color:#4A148C;"></div>
+      </div>
 
       <div class="action-row">
         <button class="btn btn-secondary" onclick="goTo('editor')">返回修改</button>
@@ -396,6 +405,7 @@
       activeTab: 'optimized',
       aiResult: null,
       aiLoading: false,
+      aiReview: null,
       aiApiKey: localStorage.getItem('ai_api_key') || 'sk-df99ce5a57dd4921b101e69db8e6f163',
       aiProvider: localStorage.getItem('ai_provider') || 'deepseek'
     };
@@ -540,31 +550,96 @@
       if (!script) { showToast('请填写脚本内容'); return; }
 
       const btn = document.getElementById('btn-review');
-      btn.innerHTML = '<span class="spinner"></span>审核中...';
+      btn.innerHTML = '<span class="spinner"></span>AI 审核中...';
       btn.disabled = true;
 
-      // 先用本地引擎立即审核（始终可用）
-      STATE.reviewResult = localReview(script);
-      STATE.optimizeResult = localOptimize(script, STATE.reviewResult);
       STATE.originalScript = script;
 
-      // 尝试调用后端 API 增强结果（可选，失败不影响使用）
-      try {
-        const res = await fetch('/api/review/review-and-optimize', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ script })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success) {
-            STATE.reviewResult = data.data.review;
-            STATE.optimizeResult = data.data.optimize;
+      // 本地引擎先行审核
+      STATE.reviewResult = localReview(script);
+      STATE.optimizeResult = localOptimize(script, STATE.reviewResult);
+
+      // 如果配置了 DeepSeek Key，用 AI 增强审核
+      if (STATE.aiApiKey) {
+        try {
+          const aiReviewPrompt = `你是微信视频号运营规范审核专家。请严格依据以下平台规则，对用户提供的视频脚本进行深度审核。
+
+## 微信视频号运营规范（完整30条）
+
+### 恶意使用类
+1. 【高风险】利诱用户互动：不得以奖励诱导分享/关注/点赞/评论，如"集赞""分享得红包""抽奖机会"
+2. 【高风险】胁迫用户互动：不得使用诅咒性言语胁迫分享，如"不转不是中国人""不点赞死全家"
+3. 【高风险】诱导未成年人应援消费：不得诱导打榜、集资、应援、控评、刷票
+4. 【高风险】煽动性交友内容：不得发布"寂寞妹妹""亲爱的哥哥""加我聊天"等
+5. 【高风险】刷量刷粉：不得使用非正常手段获取虚假数据，涉及"刷粉""刷量""买赞"
+6. 【严重违规】违法营销：不得实施诈骗、传销、非法集资、"日赚""月入过万""稳赚"
+7. 【严重违规】违规荐股荐金：未经许可不得"荐股""推荐股票""涨停板""牛股""内幕消息""私募"
+8. 【高风险】虚假宣传：不得违反广告法，如"最好""第一品牌""100%有效""根治""包治百病"
+9. 【中风险】骚扰信息：不得频繁发送骚扰/垃圾/广告信息，如"加微信领取""扫码领取""限时抢购"
+10. 【高风险】仿冒身份：不得虚假信息仿冒他人，"官方客服""冒充"
+11. 【严重违规】人身攻击：不得侮辱他人，如"傻逼""脑残""废物""人渣"
+12. 【高风险】使用外挂：不得涉及插件、外挂、"破解""修改器"
+
+### 不良信息类
+13. 【严重违规】性暗示/低俗色情：不得发布性暗示、性挑逗、色情、淫秽、约炮等内容
+14. 【严重违规】衣着暴露：不得发布露点、走光、裸聊、脱衣等内容
+15. 【严重违规】暴力血腥：不得展现杀人、自杀、自残、血腥、尸体、家暴、斗殴
+16. 【中风险】不实信息：不得发布虚假信息，避免"震惊""紧急通知""速转""扩散出去"
+17. 【中风险】伪科学：不得发布"风水运势""算命""占卜""灵异""食物相克""以形补形"
+18. 【严重违规】危害未成年人：不得涉及未成年人饮酒/吸烟/吸毒、校园欺凌、厌学弃学
+19. 【高风险】不规范医疗科普：不得有"根治""祖传秘方""宫廷秘方""神药""灵丹妙药""排毒""偏方"
+20. 【高风险】医疗风险操作：不得涉及正骨、关节复位、针灸、火针、放血、心肺复苏教学
+21. 【中风险】卖惨式内容：不得虚构事实编造故事卖惨、扮丑、道德绑架
+22. 【低风险】低质量内容：不得画质模糊、轮播文字、大字覆盖、简单拼凑、混剪P图
+23. 【中风险】AI标识：AI生成或合成的非真实内容需显著标识
+24. 【高风险】侵犯知识产权：不得抄袭、搬运、盗版、翻录、"破解版"
+25. 【严重违规】侵犯隐私权：不得发布身份证号、手机号、家庭住址等个人信息
+26. 【低风险】标题党：不得使用"震惊""竟然""居然""不可思议""难以置信"等夸张标题
+27. 【严重违规】违禁商品：不得销售枪支弹药、管制刀具、珍稀动物、烟草、处方药
+28. 【高风险】地域歧视：不得煽动地域歧视
+29. 【低风险】同质化：不得批量发布近似情景、文案、元素的同质化内容
+30. 【严重违规】虐待动物：不得展示动物自虐、自残、被杀等内容
+
+请按以下格式输出审核结果：
+【违规分析】
+逐条列出发现的问题（引用具体规则编号），每行一条。如果没有发现问题，写"未发现违规内容"。
+【风险等级】
+critical（严重违规）/ high（高风险）/ medium（中风险）/ low（低风险）
+【总体建议】
+给出一句话总体建议。`;
+
+          const res = await fetch('https://api.deepseek.com/chat/completions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${STATE.aiApiKey}` },
+            body: JSON.stringify({
+              model: 'deepseek-chat',
+              messages: [
+                { role: 'system', content: aiReviewPrompt },
+                { role: 'user', content: `请审核以下视频脚本：\n\n${script}` }
+              ],
+              temperature: 0.3, max_tokens: 2048
+            })
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            const aiText = data.choices?.[0]?.message?.content || '';
+            const analysisMatch = aiText.match(/【违规分析】([\s\S]*?)【风险等级】/);
+            const riskMatch = aiText.match(/【风险等级】\s*(\w+)/);
+            const suggestMatch = aiText.match(/【总体建议】([\s\S]*)/);
+
+            STATE.aiReview = {
+              analysis: analysisMatch ? analysisMatch[1].trim() : aiText,
+              riskLevel: riskMatch ? riskMatch[1].trim().toLowerCase() : 'unknown',
+              suggestion: suggestMatch ? suggestMatch[1].trim() : '',
+              rawOutput: aiText
+            };
+            // 如果 AI 判断为低风险但本地引擎认为有违规，合并结果
+            console.log('AI 审核完成, 风险等级:', STATE.aiReview.riskLevel);
           }
+        } catch (e) {
+          console.log('AI 审核调用失败:', e.message);
         }
-      } catch (e) {
-        // 后端不可用时使用本地引擎结果
-        console.log('后端 API 不可用，使用本地引擎');
       }
 
       btn.innerHTML = '🔍 开始审核';
@@ -640,6 +715,20 @@
           r.sensitiveWords.map(w => `<span class="sw-tag sw-${w.severity}">${w.word} ×${w.count}</span>`).join('') +
           `</div>`;
       } else { swc.style.display = 'none'; }
+
+      // AI Review
+      const arc = document.getElementById('ai-review-card');
+      const arContent = document.getElementById('ai-review-content');
+      const arFooter = document.getElementById('ai-review-footer');
+      if (STATE.aiReview) {
+        arc.style.display = 'block';
+        const ar = STATE.aiReview;
+        arContent.textContent = ar.analysis;
+        const riskLabel = { critical:'🚫 严重违规', high:'⚠️ 高风险', medium:'⚡ 中风险', low:'✅ 低风险' };
+        arFooter.innerHTML = `<b>AI 风险判定：</b>${riskLabel[ar.riskLevel] || ar.riskLevel} &nbsp;|&nbsp; ${ar.suggestion}`;
+      } else {
+        arc.style.display = 'none';
+      }
     }
 
     // ====== RENDER RESULT ======
@@ -836,7 +925,38 @@
             body: JSON.stringify({
               model,
               messages: [
-                { role: 'system', content: `你是视频号脚本优化专家，精通微信视频号运营规范。请优化用户脚本：去除诱导用语、绝对化用语、敏感词、夸张标题，保持原风格和结构。输出格式：【优化后脚本】内容【/优化后脚本】【优化说明】说明【/优化说明】` },
+                { role: 'system', content: `你是微信视频号脚本优化专家。请严格参照以下平台规范，优化用户的视频脚本，使其完全合规。
+
+## 微信视频号运营规范核心要点（必须遵守）
+
+### 禁止项（出现必须删除或修改）：
+1. 禁止诱导用语："集赞""分享得红包""邀请好友拆礼盒""不转不是中国人""不点赞死全家"
+2. 禁止绝对化虚假宣传："最好""第一""唯一""100%有效""根治""永不复发""包治百病"
+3. 禁止医疗夸大："祖传秘方""宫廷秘方""神药""灵丹妙药""偏方""排毒""一招见效"
+4. 禁止不实信息/标题党："震惊""紧急通知""速转""扩散出去""竟然""居然""不可思议"
+5. 禁止低俗色情、暴力恐怖、赌博诈骗、人身攻击、地域歧视、侵犯隐私（身份证/手机号/住址）
+6. 禁止荐股金融营销："荐股""推荐股票""内幕消息""涨停板""稳赚不赔""私募"
+7. 禁止违规引流："加微信""加QQ""扫码领取""免费领取"
+8. 禁止传销诈骗："传销""非法集资""刷单""日赚""月入过万"
+9. 禁止伪科学："风水运势""算命""占卜""灵异""食物相克""以形补形"
+10. 禁止卖惨扮丑道德绑架、虐待动物、危害未成年人、抄袭侵权
+11. 禁止仿冒身份、外挂插件破解
+12. AI生成内容需标注
+
+### 优化风格要求：
+- 保持脚本原有结构（场景/对白/旁白/字幕/音效）不变
+- 将有问题的词替换为合规表述，如"最好"→"优质"、"第一"→"领先"、"根治"→"有效缓解"
+- 诱导用语改为真诚邀请，如"集赞"→"收集互动"、"免费领取"→"了解详情"
+- 保持自然口语化，不做过度改写
+- 长度基本不变
+
+## 输出格式（严格遵守）：
+【优化后脚本】
+(这里放完整的优化后脚本)
+【/优化后脚本】
+【优化说明】
+(50字以内的简短优化说明)
+【/优化说明】` },
                 { role: 'user', content: `违规项：\n${violationInfo || '无'}\n\n建议：\n${suggestionInfo || '无'}\n\n原脚本：\n${script}` }
               ],
               temperature: 0.7,

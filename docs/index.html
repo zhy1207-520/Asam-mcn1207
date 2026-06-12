@@ -311,7 +311,7 @@
       <div class="card" id="ai-review-card" style="display:none;background:linear-gradient(135deg,#F5F0FF,#EDE7F6);border:2px solid #D1C4E9;">
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;">
           <span style="font-size:18px;">🤖</span>
-          <span style="font-weight:600;font-size:15px;">DeepSeek AI 深度分析</span>
+          <span style="font-weight:600;font-size:15px;">DeepSeek V4-Pro 深度分析</span>
           <span class="ai-badge">基于30条规则</span>
         </div>
         <div id="ai-review-content" style="font-size:13px;color:#555;line-height:1.7;white-space:pre-wrap;"></div>
@@ -376,7 +376,7 @@
       <p class="sub">接入 AI 模型对脚本进行智能润色优化</p>
       <label>AI 服务商</label>
       <select id="ai-provider" onchange="onAIProviderChange()">
-        <option value="deepseek">DeepSeek（推荐，中文优化好）</option>
+        <option value="deepseek">DeepSeek V4-Pro（推荐，最强中文能力）</option>
         <option value="openai">OpenAI (GPT-4o-mini)</option>
         <option value="groq">Groq (Llama 3.3, 免费)</option>
       </select>
@@ -612,7 +612,7 @@ critical（严重违规）/ high（高风险）/ medium（中风险）/ low（�
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${STATE.aiApiKey}` },
             body: JSON.stringify({
-              model: 'deepseek-chat',
+              model: 'deepseek-v4-pro',
               messages: [
                 { role: 'system', content: aiReviewPrompt },
                 { role: 'user', content: `请审核以下视频脚本：\n\n${script}` }
@@ -909,7 +909,7 @@ critical（严重违规）/ high（高风险）/ medium（中风险）/ low（�
         // Fallback: direct API call
         if (!result) {
           const provider = STATE.aiProvider;
-          const models = { deepseek: 'deepseek-chat', openai: 'gpt-4o-mini', groq: 'llama-3.3-70b-versatile' };
+          const models = { deepseek: 'deepseek-v4-pro', openai: 'gpt-4o-mini', groq: 'llama-3.3-70b-versatile' };
           const apiUrl = directUrls[provider] || directUrls.deepseek;
           const model = models[provider] || models.deepseek;
 

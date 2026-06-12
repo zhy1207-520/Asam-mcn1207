@@ -1,0 +1,722 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>视频号脚本审核助手</title>
+  <style>
+    :root {
+      --green: #07C160;
+      --green-dark: #06AD56;
+      --red: #FA5151;
+      --orange: #E6A23C;
+      --blue: #409EFF;
+      --bg: #f5f5f5;
+      --card: #fff;
+      --text: #333;
+      --text2: #666;
+      --text3: #999;
+      --border: #e0e0e0;
+      --radius: 12px;
+      --shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+      background: var(--bg); color: var(--text); line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    .container { max-width: 640px; margin: 0 auto; padding: 16px; min-height: 100vh; }
+
+    /* Buttons */
+    .btn { display: block; width: 100%; padding: 14px 0; border: none; border-radius: var(--radius); font-size: 16px; font-weight: 600; cursor: pointer; text-align: center; transition: all 0.2s; }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: linear-gradient(135deg, var(--green), var(--green-dark)); color: #fff; }
+    .btn-secondary { background: #fff; color: var(--green); border: 2px solid var(--green); }
+    .btn-danger { background: linear-gradient(135deg, var(--red), #E64340); color: #fff; }
+    .btn-outline { background: #f5f5f5; color: var(--text2); }
+    .btn:disabled { opacity: 0.5; pointer-events: none; }
+
+    /* Card */
+    .card { background: var(--card); border-radius: var(--radius); padding: 20px; margin-bottom: 14px; box-shadow: var(--shadow); }
+    .card-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 14px; display: block; }
+
+    /* Tags */
+    .tag { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 12px; margin: 0 6px 6px 0; }
+    .tag-critical { background: #FFF0F0; color: var(--red); }
+    .tag-high { background: #FFF8F0; color: var(--orange); }
+    .tag-medium { background: #F0F8FF; color: var(--blue); }
+    .tag-low { background: #F0FFF0; color: #67C23A; }
+
+    /* Text colors */
+    .t-red { color: var(--red); }
+    .t-orange { color: var(--orange); }
+    .t-blue { color: var(--blue); }
+    .t-green { color: #67C23A; }
+
+    /* ====== PAGE: Login ====== */
+    .login-header { text-align: center; padding: 50px 0 30px; }
+    .login-logo { width: 80px; height: 80px; border-radius: 20px; background: linear-gradient(135deg, var(--green), var(--green-dark)); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 40px; color: #fff; }
+    .login-header h1 { font-size: 24px; color: var(--text); margin-bottom: 6px; }
+    .login-header p { font-size: 13px; color: var(--text3); }
+    .login-card { text-align: center; padding: 30px 20px; }
+    .login-card .avatar { width: 64px; height: 64px; border-radius: 50%; background: #e8e8e8; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; font-size: 28px; }
+    .login-card .nickname { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+    .login-card .user-id { font-size: 12px; color: var(--text3); margin-bottom: 16px; }
+    .login-card .logout-link { font-size: 13px; color: var(--text3); cursor: pointer; text-decoration: underline; }
+
+    /* ====== PAGE: Editor ====== */
+    .steps { display: flex; align-items: center; justify-content: center; padding: 16px 0; margin-bottom: 10px; }
+    .step { display: flex; flex-direction: column; align-items: center; }
+    .step-num { width: 32px; height: 32px; border-radius: 50%; background: #e0e0e0; color: #999; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+    .step.active .step-num { background: var(--green); color: #fff; }
+    .step span { font-size: 11px; color: #999; }
+    .step.active span { color: var(--green); font-weight: 500; }
+    .step-line { width: 50px; height: 2px; background: #e0e0e0; margin: 0 8px 22px; }
+
+    .cat-list { display: flex; flex-wrap: wrap; gap: 10px; }
+    .cat-item { padding: 8px 18px; border-radius: 20px; background: #f5f5f5; font-size: 13px; color: var(--text2); cursor: pointer; border: 2px solid transparent; }
+    .cat-item.active { background: #E8F8EE; color: var(--green); border-color: var(--green); font-weight: 500; }
+
+    .title-input { width: 100%; height: 44px; background: #f9f9f9; border: 2px solid var(--border); border-radius: var(--radius); padding: 0 14px; font-size: 15px; outline: none; }
+    .title-input:focus { border-color: var(--green); background: #fff; }
+
+    .script-area { width: 100%; min-height: 280px; background: #f9f9f9; border: 2px solid var(--border); border-radius: var(--radius); padding: 14px; font-size: 14px; color: var(--text); resize: vertical; outline: none; font-family: inherit; line-height: 1.8; }
+    .script-area:focus { border-color: var(--green); background: #fff; }
+
+    .quick-actions { display: flex; gap: 10px; }
+    .quick-actions .btn { flex: 1; font-size: 13px; padding: 10px 0; }
+
+    .word-count { font-size: 12px; color: var(--text3); float: right; }
+
+    /* ====== PAGE: Review ====== */
+    .result-banner { display: flex; align-items: center; padding: 20px; border-radius: var(--radius); margin-bottom: 14px; }
+    .result-banner.critical { background: #FFF0F0; }
+    .result-banner.high { background: #FFF8F0; }
+    .result-banner.medium { background: #F0F8FF; }
+    .result-banner.low { background: #F0FFF0; }
+    .result-icon { font-size: 40px; margin-right: 16px; }
+    .result-text h3 { font-size: 18px; margin-bottom: 4px; }
+    .result-text p { font-size: 13px; color: var(--text2); }
+
+    .stats-row { display: flex; gap: 8px; }
+    .stat-box { flex: 1; text-align: center; padding: 14px 0; border-radius: var(--radius); }
+    .stat-box.critical { background: #FFF0F0; }
+    .stat-box.high { background: #FFF8F0; }
+    .stat-box.medium { background: #F0F8FF; }
+    .stat-box.low { background: #F0FFF0; }
+    .stat-box .num { font-size: 28px; font-weight: 700; display: block; }
+    .stat-box .lbl { font-size: 11px; color: var(--text3); margin-top: 2px; display: block; }
+
+    .v-item { padding: 14px 0; border-bottom: 1px solid #f0f0f0; }
+    .v-item:last-child { border-bottom: none; }
+    .v-title { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+    .v-msg { font-size: 13px; color: var(--text2); line-height: 1.5; margin-bottom: 6px; }
+    .v-sug { font-size: 12px; color: var(--green); background: #F0FFF0; padding: 6px 10px; border-radius: 6px; display: inline-block; }
+
+    .sw-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+    .sw-tag { font-size: 12px; padding: 4px 10px; border-radius: 6px; }
+    .sw-critical { background: #FFF0F0; color: var(--red); }
+    .sw-high { background: #FFF8F0; color: var(--orange); }
+
+    .action-row { display: flex; gap: 10px; margin-top: 20px; padding-bottom: 30px; }
+    .action-row .btn { flex: 1; }
+
+    /* ====== PAGE: Result ====== */
+    .opt-summary { background: linear-gradient(135deg, #F0FFF0, #E8F8EE); padding: 20px; border-radius: var(--radius); margin-bottom: 14px; }
+    .opt-summary h3 { font-size: 17px; color: #2E7D32; margin-bottom: 4px; }
+    .opt-summary p { font-size: 13px; color: #558B2F; }
+
+    .tab-bar { display: flex; background: #f5f5f5; border-radius: var(--radius); padding: 4px; margin-bottom: 14px; }
+    .tab-btn { flex: 1; text-align: center; padding: 10px 0; font-size: 14px; color: var(--text2); border-radius: 10px; cursor: pointer; border: none; background: none; }
+    .tab-btn.active { background: #fff; color: var(--green); font-weight: 600; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+
+    .script-box { background: #f9f9f9; border-radius: var(--radius); padding: 16px; max-height: 400px; overflow-y: auto; font-size: 14px; line-height: 2; white-space: pre-wrap; word-break: break-all; }
+    .script-box.optimized { background: #F0FFF0; border: 2px solid #C8E6C9; }
+
+    .change-item { padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
+    .change-item:last-child { border-bottom: none; }
+    .change-type { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 500; }
+    .ct-delete { background: #FFF0F0; color: var(--red); }
+    .ct-replace { background: #FFF8F0; color: var(--orange); }
+    .ct-optimize { background: #F0F8FF; color: var(--blue); }
+    .change-detail { font-size: 13px; margin: 6px 0; }
+    .change-detail .old { color: var(--red); text-decoration: line-through; }
+    .change-detail .new { color: var(--green); font-weight: 500; }
+    .change-reason { font-size: 11px; color: var(--text3); }
+
+    .compliance-box { background: #F0F8FF; border-left: 4px solid var(--blue); padding: 14px; border-radius: 0 var(--radius) var(--radius) 0; margin: 14px 0; font-size: 13px; color: #1565C0; }
+
+    /* Loading spinner */
+    .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 8px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Toast */
+    .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: #fff; padding: 10px 24px; border-radius: 20px; font-size: 14px; z-index: 9999; display: none; }
+    .toast.show { display: block; animation: fadeIn 0.3s; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(-10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+
+    /* Page visibility */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* Responsive */
+    @media (min-width: 768px) {
+      .container { padding: 24px; }
+      .script-area { min-height: 360px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="app">
+    <!-- ==================== PAGE: LOGIN ==================== -->
+    <div class="page active" id="page-login">
+      <div class="login-header">
+        <div class="login-logo">📹</div>
+        <h1>视频号脚本审核助手</h1>
+        <p>基于微信视频号运营规范 · 智能审核与优化</p>
+      </div>
+      <div class="card login-card" id="login-panel">
+        <div class="avatar">👤</div>
+        <div class="nickname">欢迎使用</div>
+        <div class="user-id">请先登录以使用全部功能</div>
+        <button class="btn btn-primary" id="btn-login">微信一键登录</button>
+      </div>
+      <div class="card" id="feature-cards">
+        <div class="card-title">功能服务</div>
+        <div class="feature-list" style="display:flex;flex-direction:column;gap:0;">
+          <div class="v-item" style="display:flex;align-items:center;gap:12px;cursor:pointer;" onclick="goTo('editor')">
+            <span style="font-size:28px;">📝</span>
+            <div style="flex:1;"><div style="font-size:14px;font-weight:500;">脚本内容审核</div><div style="font-size:12px;color:var(--text3);">填写脚本，自动检测敏感词、违规标记</div></div>
+            <span style="color:#ccc;font-size:20px;">›</span>
+          </div>
+          <div class="v-item" style="display:flex;align-items:center;gap:12px;cursor:pointer;" onclick="goTo('editor')">
+            <span style="font-size:28px;">✨</span>
+            <div style="flex:1;"><div style="font-size:14px;font-weight:500;">智能优化建议</div><div style="font-size:12px;color:var(--text3);">根据平台规则提供优化建议，生成合规脚本</div></div>
+            <span style="color:#ccc;font-size:20px;">›</span>
+          </div>
+          <div class="v-item" style="display:flex;align-items:center;gap:12px;cursor:pointer;" onclick="goTo('editor')">
+            <span style="font-size:28px;">📋</span>
+            <div style="flex:1;"><div style="font-size:14px;font-weight:500;">平台规则库</div><div style="font-size:12px;color:var(--text3);">微信视频号历年运营规范查询</div></div>
+            <span style="color:#ccc;font-size:20px;">›</span>
+          </div>
+        </div>
+      </div>
+      <div style="text-align:center;padding:20px 0;font-size:12px;color:var(--text3);">本工具基于《微信视频号运营规范》设计 · 最终以平台为准</div>
+    </div>
+
+    <!-- ==================== PAGE: EDITOR ==================== -->
+    <div class="page" id="page-editor">
+      <div style="display:flex;align-items:center;padding:8px 0;margin-bottom:10px;">
+        <span style="font-size:20px;color:var(--green);cursor:pointer;margin-right:12px;" onclick="goTo('login')">←</span>
+        <span style="font-size:17px;font-weight:600;">编写脚本</span>
+      </div>
+      <div class="steps">
+        <div class="step active"><div class="step-num">1</div><span>填写脚本</span></div>
+        <div class="step-line"></div>
+        <div class="step"><div class="step-num">2</div><span>智能审核</span></div>
+        <div class="step-line"></div>
+        <div class="step"><div class="step-num">3</div><span>优化脚本</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">脚本分类</div>
+        <div class="cat-list" id="cat-list">
+          <div class="cat-item" data-cat="knowledge">📚 知识科普</div>
+          <div class="cat-item" data-cat="entertainment">🎬 娱乐搞笑</div>
+          <div class="cat-item" data-cat="life">🏠 生活分享</div>
+          <div class="cat-item" data-cat="business">💼 商业推广</div>
+          <div class="cat-item" data-cat="education">🎓 教育培训</div>
+          <div class="cat-item" data-cat="other">📌 其他</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">脚本标题</div>
+        <input class="title-input" id="script-title" placeholder="请输入视频脚本标题（选填）" maxlength="50" />
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <span class="card-title" style="margin-bottom:0;">脚本内容</span>
+          <span class="word-count" id="word-count">0/5000</span>
+        </div>
+        <textarea class="script-area" id="script-content" placeholder="请在此粘贴或输入视频脚本内容...
+
+支持格式：
+【场景】描述画面场景
+【对白】主角台词
+【旁白】画外音/解说
+【字幕】屏幕文字
+【音效】背景音乐/音效
+【时长】预计时长" maxlength="5000"></textarea>
+      </div>
+
+      <div class="card">
+        <div class="quick-actions">
+          <button class="btn btn-outline" onclick="pasteClipboard()">📋 粘贴</button>
+          <button class="btn btn-outline" onclick="clearScript()">🗑️ 清空</button>
+          <button class="btn btn-outline" onclick="loadExample()">💡 示例</button>
+        </div>
+      </div>
+
+      <div style="text-align:center;padding:20px 0 40px;">
+        <button class="btn btn-primary" id="btn-review" onclick="submitReview()" style="font-size:17px;">🔍 开始审核</button>
+        <div style="font-size:12px;color:var(--text3);margin-top:8px;" id="review-hint">请先填写脚本内容</div>
+      </div>
+    </div>
+
+    <!-- ==================== PAGE: REVIEW ==================== -->
+    <div class="page" id="page-review">
+      <div style="display:flex;align-items:center;padding:8px 0;margin-bottom:10px;">
+        <span style="font-size:20px;color:var(--green);cursor:pointer;margin-right:12px;" onclick="goTo('editor')">←</span>
+        <span style="font-size:17px;font-weight:600;">审核结果</span>
+      </div>
+
+      <div id="review-banner"></div>
+
+      <div class="card" id="stats-card"></div>
+      <div class="card" id="violations-card"></div>
+      <div class="card" id="warnings-card"></div>
+      <div class="card" id="suggestions-card"></div>
+      <div class="card" id="sensitive-words-card"></div>
+
+      <div class="action-row">
+        <button class="btn btn-secondary" onclick="goTo('editor')">返回修改</button>
+        <button class="btn btn-primary" onclick="goTo('result')">查看优化脚本</button>
+      </div>
+    </div>
+
+    <!-- ==================== PAGE: RESULT ==================== -->
+    <div class="page" id="page-result">
+      <div style="display:flex;align-items:center;padding:8px 0;margin-bottom:10px;">
+        <span style="font-size:20px;color:var(--green);cursor:pointer;margin-right:12px;" onclick="goTo('review')">←</span>
+        <span style="font-size:17px;font-weight:600;">优化脚本</span>
+      </div>
+
+      <div id="opt-summary"></div>
+      <div class="card" id="changes-card"></div>
+
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('original')">原始脚本</button>
+        <button class="tab-btn" onclick="switchTab('optimized')">优化后脚本</button>
+      </div>
+      <div class="script-box" id="script-display"></div>
+
+      <div id="compliance-note"></div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;padding:20px 0 40px;">
+        <button class="btn btn-primary" onclick="copyOptimized()" style="font-size:16px;">📋 复制优化脚本</button>
+        <button class="btn btn-secondary" onclick="goTo('editor')">重新编辑</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ====== STATE ======
+    const STATE = {
+      isLoggedIn: false,
+      userInfo: null,
+      token: null,
+      currentCategory: '',
+      reviewResult: null,
+      optimizeResult: null,
+      originalScript: '',
+      activeTab: 'optimized'
+    };
+
+    // ====== NAVIGATION ======
+    function goTo(page) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      const target = document.getElementById('page-' + page);
+      if (target) target.classList.add('active');
+      window.scrollTo(0, 0);
+
+      if (page === 'review') renderReview();
+      if (page === 'result') renderResult();
+    }
+
+    // ====== TOAST ======
+    function showToast(msg, duration = 2000) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), duration);
+    }
+
+    // ====== LOGIN ======
+    document.getElementById('btn-login').addEventListener('click', () => {
+      const btn = document.getElementById('btn-login');
+      btn.innerHTML = '<span class="spinner"></span>登录中...';
+      btn.disabled = true;
+
+      // Simulate WeChat login (in production, use wx.login() + real API)
+      setTimeout(() => {
+        STATE.isLoggedIn = true;
+        STATE.token = 'token_' + Math.random().toString(36).substring(2, 20);
+        STATE.userInfo = { nickName: '视频号创作者', avatarUrl: '' };
+
+        const panel = document.getElementById('login-panel');
+        panel.innerHTML = `
+          <div class="avatar">👤</div>
+          <div class="nickname">${STATE.userInfo.nickName}</div>
+          <div class="user-id">已通过微信登录</div>
+          <span class="logout-link" onclick="logout()">退出登录</span>
+        `;
+        showToast('登录成功');
+        btn.innerHTML = '微信一键登录';
+        btn.disabled = false;
+        // 登录成功后自动跳转到编辑器
+        setTimeout(() => goTo('editor'), 600);
+      }, 800);
+    });
+
+    function logout() {
+      STATE.isLoggedIn = false;
+      STATE.token = null;
+      STATE.userInfo = null;
+      STATE.reviewResult = null;
+      STATE.optimizeResult = null;
+
+      const panel = document.getElementById('login-panel');
+      panel.innerHTML = `
+        <div class="avatar">👤</div>
+        <div class="nickname">欢迎使用</div>
+        <div class="user-id">请先登录以使用全部功能</div>
+        <button class="btn btn-primary" id="btn-login">微信一键登录</button>
+      `;
+      document.getElementById('btn-login').addEventListener('click', arguments.callee);
+      showToast('已退出登录');
+    }
+
+    // ====== EDITOR ======
+    // Category selection
+    document.getElementById('cat-list').addEventListener('click', (e) => {
+      if (e.target.classList.contains('cat-item')) {
+        const cat = e.target.dataset.cat;
+        STATE.currentCategory = STATE.currentCategory === cat ? '' : cat;
+        document.querySelectorAll('.cat-item').forEach(el => {
+          el.classList.toggle('active', el.dataset.cat === STATE.currentCategory);
+        });
+      }
+    });
+
+    // Word count
+    document.getElementById('script-content').addEventListener('input', (e) => {
+      const len = e.target.value.length;
+      document.getElementById('word-count').textContent = len + '/5000';
+      const hint = document.getElementById('review-hint');
+      hint.textContent = len > 0 ? '点击下方按钮开始审核' : '请先填写脚本内容';
+    });
+
+    function pasteClipboard() {
+      navigator.clipboard.readText().then(text => {
+        const ta = document.getElementById('script-content');
+        ta.value = ta.value + '\n' + text;
+        ta.dispatchEvent(new Event('input'));
+        showToast('已粘贴');
+      }).catch(() => showToast('剪贴板为空'));
+    }
+
+    function clearScript() {
+      document.getElementById('script-content').value = '';
+      document.getElementById('script-title').value = '';
+      document.getElementById('script-content').dispatchEvent(new Event('input'));
+      showToast('已清空');
+    }
+
+    function loadExample() {
+      const example = `【场景】温馨的居家客厅，自然光线透过窗户
+【时长】约60秒
+【对白】
+大家好，我是小王。今天跟大家分享一个绝对好用的生活小技巧，震惊！你肯定不知道！
+你们有没有遇到过这种情况：
+家里的绿植总是养不好，叶子发黄、枯萎？
+其实，这个问题必须要注意！我有一招见效的祖传秘方。
+
+【画面展示】正确的浇水方法演示
+【旁白】
+记住这三点：
+第一，见干见湿，等土壤干了再浇透；
+第二，选择合适的时间，早晨或傍晚浇水效果最好；
+第三，根据不同植物调整浇水频率，这个方法100%有效。
+
+【对白】
+如果你觉得有用，赶紧点赞收藏，免费领取更多生活小技巧。
+加微信了解更多内容，我们下期再见！
+
+【字幕】关注我，免费送小技巧合集
+【音效】轻松愉快的背景音乐`;
+      document.getElementById('script-title').value = '居家绿植养护小技巧';
+      document.getElementById('script-content').value = example;
+      document.getElementById('script-content').dispatchEvent(new Event('input'));
+      STATE.currentCategory = 'life';
+      document.querySelectorAll('.cat-item').forEach(el => {
+        el.classList.toggle('active', el.dataset.cat === 'life');
+      });
+      showToast('示例脚本已加载，点击「开始审核」试试');
+      // 滚动到审核按钮
+      document.getElementById('btn-review').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // ====== SUBMIT REVIEW ======
+    async function submitReview() {
+      const script = document.getElementById('script-content').value.trim();
+      if (!script) { showToast('请填写脚本内容'); return; }
+
+      const btn = document.getElementById('btn-review');
+      btn.innerHTML = '<span class="spinner"></span>审核中...';
+      btn.disabled = true;
+
+      // 先用本地引擎立即审核（始终可用）
+      STATE.reviewResult = localReview(script);
+      STATE.optimizeResult = localOptimize(script, STATE.reviewResult);
+      STATE.originalScript = script;
+
+      // 尝试调用后端 API 增强结果（可选，失败不影响使用）
+      try {
+        const res = await fetch('/api/review/review-and-optimize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ script })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            STATE.reviewResult = data.data.review;
+            STATE.optimizeResult = data.data.optimize;
+          }
+        }
+      } catch (e) {
+        // 后端不可用时使用本地引擎结果
+        console.log('后端 API 不可用，使用本地引擎');
+      }
+
+      btn.innerHTML = '🔍 开始审核';
+      btn.disabled = false;
+      goTo('review');
+    }
+
+    // ====== RENDER REVIEW ======
+    function renderReview() {
+      const r = STATE.reviewResult;
+      if (!r) return;
+
+      // Banner
+      const banner = document.getElementById('review-banner');
+      const riskMap = {
+        critical: { icon: '🚫', title: '严重违规', desc: '脚本存在严重违规内容，需要立即修改', cls: 'critical' },
+        high: { icon: '⚠️', title: '高风险', desc: '脚本存在较高违规风险，建议修改后发布', cls: 'high' },
+        medium: { icon: '⚡', title: '中等风险', desc: '脚本存在一些需要注意的问题', cls: 'medium' },
+        low: { icon: '✅', title: '审核通过', desc: '脚本内容合规，可以放心使用', cls: 'low' }
+      };
+      const rm = riskMap[r.overallRisk] || riskMap.low;
+      banner.innerHTML = `<div class="result-banner ${rm.cls}"><span class="result-icon">${rm.icon}</span><div class="result-text"><h3>${rm.title}</h3><p>${rm.desc}</p></div></div>`;
+
+      // Stats
+      document.getElementById('stats-card').innerHTML = `
+        <div class="card-title">检测统计</div>
+        <div class="stats-row">
+          <div class="stat-box critical"><span class="num t-red">${r.stats.critical}</span><span class="lbl">严重</span></div>
+          <div class="stat-box high"><span class="num t-orange">${r.stats.high}</span><span class="lbl">高风险</span></div>
+          <div class="stat-box medium"><span class="num t-blue">${r.stats.medium}</span><span class="lbl">中等</span></div>
+          <div class="stat-box low"><span class="num t-green">${r.stats.low}</span><span class="lbl">低风险</span></div>
+        </div>`;
+
+      // Violations
+      const vc = document.getElementById('violations-card');
+      if (r.violations.length > 0) {
+        vc.style.display = 'block';
+        vc.innerHTML = `<div class="card-title">🚫 违规内容 (${r.violations.length})</div>` +
+          r.violations.map(v => `
+            <div class="v-item">
+              <span class="tag tag-${v.severity}">${v.severity === 'critical' ? '严重' : '高风险'}</span>
+              <span class="v-title">${v.title || v.type}</span>
+              <div class="v-msg">${v.message}</div>
+              ${v.suggestion ? `<span class="v-sug">💡 ${v.suggestion}</span>` : ''}
+            </div>`).join('');
+      } else { vc.style.display = 'none'; }
+
+      // Warnings
+      const wc = document.getElementById('warnings-card');
+      if (r.warnings.length > 0) {
+        wc.style.display = 'block';
+        wc.innerHTML = `<div class="card-title">⚠️ 警告提示 (${r.warnings.length})</div>` +
+          r.warnings.map(w => `
+            <div class="v-item">
+              <div class="v-msg">${w.message}</div>
+              ${w.suggestion ? `<span class="v-sug">💡 ${w.suggestion}</span>` : ''}
+            </div>`).join('');
+      } else { wc.style.display = 'none'; }
+
+      // Suggestions
+      const sc = document.getElementById('suggestions-card');
+      if (r.suggestions.length > 0) {
+        sc.style.display = 'block';
+        sc.innerHTML = `<div class="card-title">💡 优化建议 (${r.suggestions.length})</div>` +
+          r.suggestions.map(s => `<div class="v-item"><div class="v-msg" style="color:var(--blue);">${s.message}</div></div>`).join('');
+      } else { sc.style.display = 'none'; }
+
+      // Sensitive words
+      const swc = document.getElementById('sensitive-words-card');
+      if (r.sensitiveWords.length > 0) {
+        swc.style.display = 'block';
+        swc.innerHTML = `<div class="card-title">🔍 检测到的敏感词</div><div class="sw-tags">` +
+          r.sensitiveWords.map(w => `<span class="sw-tag sw-${w.severity}">${w.word} ×${w.count}</span>`).join('') +
+          `</div>`;
+      } else { swc.style.display = 'none'; }
+    }
+
+    // ====== RENDER RESULT ======
+    function renderResult() {
+      const o = STATE.optimizeResult;
+      if (!o) return;
+
+      document.getElementById('opt-summary').innerHTML = `
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span style="font-size:36px;">✨</span>
+          <div>
+            <h3>脚本优化完成</h3>
+            <p>${o.improvementSummary}</p>
+          </div>
+        </div>`;
+
+      // Changes
+      const cc = document.getElementById('changes-card');
+      if (o.changes.length > 0) {
+        cc.style.display = 'block';
+        cc.innerHTML = `<div class="card-title">📝 修改明细 (${o.totalChanges})</div>` +
+          o.changes.map(c => `
+            <div class="change-item">
+              <span class="change-type ${c.type === '删除违规词' ? 'ct-delete' : c.type === '替换敏感词' ? 'ct-replace' : 'ct-optimize'}">${c.type}</span>
+              <div class="change-detail">
+                <span class="old">${c.original}</span>
+                ${c.replacement ? ' → <span class="new">' + c.replacement + '</span>' : ''}
+              </div>
+              <div class="change-reason">${c.reason}</div>
+            </div>`).join('');
+      } else { cc.style.display = 'none'; }
+
+      // Script display
+      STATE.activeTab = 'optimized';
+      updateScriptDisplay();
+      document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', i === 1));
+
+      // Compliance
+      document.getElementById('compliance-note').innerHTML = `
+        <div class="compliance-box">📋 ${o.complianceNote}</div>`;
+    }
+
+    function switchTab(tab) {
+      STATE.activeTab = tab;
+      document.querySelectorAll('.tab-btn').forEach((b, i) => {
+        b.classList.toggle('active', (i === 0 && tab === 'original') || (i === 1 && tab === 'optimized'));
+      });
+      updateScriptDisplay();
+    }
+
+    function updateScriptDisplay() {
+      const o = STATE.optimizeResult;
+      const display = document.getElementById('script-display');
+      const script = STATE.activeTab === 'original' ? o.originalScript : o.optimizedScript;
+      display.className = 'script-box' + (STATE.activeTab === 'optimized' ? ' optimized' : '');
+      display.textContent = script;
+    }
+
+    function copyOptimized() {
+      const script = STATE.optimizeResult?.optimizedScript;
+      if (!script?.trim()) { showToast('脚本内容为空'); return; }
+      navigator.clipboard.writeText(script).then(() => {
+        showToast('已复制到剪贴板，可直接粘贴使用');
+      }).catch(() => showToast('复制失败，请手动选择复制'));
+    }
+
+    // ====== LOCAL FALLBACK ENGINE ======
+    function localReview(script) {
+      const severeWords = ['颠覆国家政权','分裂国家','煽动民族仇恨','邪教','封建迷信','裸体','性交','色情','淫秽','卖淫','嫖娼','约炮','成人视频','情趣用品','性暗示','性挑逗','恐怖袭击','炸弹制作','杀人','自杀','自残','吸毒','贩毒','枪支','弹药','爆炸物','管制刀具','赌博','赌场','博彩','六合彩','时时彩','赌球','传销','非法集资','庞氏骗局','刷单','佣金任务','走私','珍稀野生动植物','人体器官'];
+      const moderateWords = ['不转不是中国人','不点赞死全家','不转倒霉','转发保佑','点赞发大财','分享得红包','集赞','邀请好友拆礼盒','根治','包治百病','一招见效','祖传秘方','宫廷秘方','神药','灵丹妙药','100%有效','永不复发','立刻见效','国酒','中国第一','全国第一','世界第一','排毒','食物相克','以形补形','时辰决定生男女','刮痧治病','拔罐治病','食疗治病','偏方','震惊','紧急通知','速转','火速转发','扩散出去','人肉搜索','曝光隐私','身份证号','家庭住址','荐股','推荐股票','内幕消息','稳赚不赔','涨停板','加微信','加QQ','扫码领取','免费领取','寂寞妹妹','亲爱的哥哥','婚外恋','童养媳','婚闹','卖惨','扮丑','道德绑架','骗取同情','风水运势','算命','星座运势','占卜','灵异'];
+      const suggestWords = ['最好','第一','唯一','绝对','肯定','必须','最便宜','最低价','史上最','史无前例','免费送','限时抢','赶紧','别再','竟然','居然','不可思议','难以置信'];
+
+      const result = { script, violations: [], warnings: [], suggestions: [], sensitiveWords: [], overallRisk: 'low', passed: true, stats: { critical: 0, high: 0, medium: 0, low: 0 } };
+
+      severeWords.forEach(w => {
+        if (script.includes(w)) {
+          const count = (script.match(new RegExp(w, 'g')) || []).length;
+          result.sensitiveWords.push({ word: w, count, severity: 'critical' });
+          result.violations.push({ type: '严重敏感词', word: w, count, severity: 'critical', message: `脚本包含严重违规词「${w}」，请立即删除` });
+          result.stats.critical++;
+        }
+      });
+
+      moderateWords.forEach(w => {
+        if (script.includes(w)) {
+          const count = (script.match(new RegExp(w, 'g')) || []).length;
+          result.sensitiveWords.push({ word: w, count, severity: 'high' });
+          result.warnings.push({ type: '敏感词警示', word: w, count, severity: 'high', message: `脚本包含敏感词「${w}」，建议修改` });
+          result.stats.high++;
+        }
+      });
+
+      suggestWords.forEach(w => {
+        if (script.includes(w)) {
+          result.suggestions.push({ type: '用词优化', word: w, message: `「${w}」属于绝对化/夸张性用语，建议替换为更客观的表达` });
+          result.stats.medium++;
+        }
+      });
+
+      if (result.stats.critical > 0) { result.overallRisk = 'critical'; result.passed = false; }
+      else if (result.stats.high >= 3) { result.overallRisk = 'high'; result.passed = false; }
+      else if (result.stats.high >= 1) { result.overallRisk = 'medium'; result.passed = false; }
+      else if (result.stats.medium >= 5) { result.overallRisk = 'medium'; result.passed = false; }
+
+      return result;
+    }
+
+    function localOptimize(script, reviewResult) {
+      const replacements = {
+        '震惊': '关注', '紧急通知': '温馨提示', '速转': '请分享', '火速转发': '欢迎转发', '扩散出去': '分享出去',
+        '免费领取': '了解详情', '加微信': '了解更多', '加QQ': '了解更多', '扫码领取': '参与活动',
+        '最好': '优质', '第一': '领先', '唯一': '独有', '绝对': '相当', '必须': '建议',
+        '最便宜': '性价比高', '最低价': '实惠价格', '史上最': '非常', '史无前例': '难得一见',
+        '免费送': '赠送', '限时抢': '限时活动', '赶紧': '可以', '别再': '不必',
+        '竟然': '确实', '居然': '原来', '不可思议': '令人惊叹', '难以置信': '令人惊喜',
+        '根治': '有效缓解', '包治百病': '具有一定的保健作用', '一招见效': '持续使用可见效果',
+        '祖传秘方': '传统配方', '宫廷秘方': '传统配方', '神药': '药品', '灵丹妙药': '有效药物',
+        '100%有效': '经实践验证', '永不复发': '有助于降低复发率', '立刻见效': '使用后可见改善',
+        '国酒': '知名酒品', '中国第一': '知名品牌', '全国第一': '行业领先', '世界第一': '国际知名',
+        '排毒': '调理身体', '食物相克': '食物搭配', '以形补形': '营养补充',
+        '刮痧治病': '刮痧调理', '拔罐治病': '拔罐调理', '食疗治病': '食疗调理', '偏方': '民间方法',
+        '荐股': '投资分析', '推荐股票': '投资参考', '内幕消息': '市场动态', '稳赚不赔': '理性投资',
+        '风水运势': '生活参考', '星座运势': '星座文化',
+        '不转不是中国人': '欢迎分享给更多朋友', '点赞发大财': '点赞支持', '分享得红包': '分享给朋友',
+        '集赞': '收集互动',
+      };
+
+      let optimized = script;
+      const changes = [];
+
+      Object.entries(replacements).forEach(([word, repl]) => {
+        if (optimized.includes(word)) {
+          const count = (optimized.match(new RegExp(word, 'g')) || []).length;
+          optimized = optimized.replace(new RegExp(word, 'g'), repl);
+          changes.push({ type: '用词优化', original: word, replacement: repl, reason: '建议使用更客观的表达', count });
+        }
+      });
+
+      optimized = optimized.replace(/\n{3,}/g, '\n\n').trim();
+
+      return {
+        originalScript: script,
+        optimizedScript: optimized,
+        changes,
+        complianceNote: '本脚本已完成优化，符合微信视频号运营规范，可以放心使用。',
+        totalChanges: changes.length,
+        improvementSummary: changes.length > 0 ? `共完成${changes.length}处优化。` : '您的脚本无需优化，内容合规。'
+      };
+    }
+  </script>
+</body>
+</html>

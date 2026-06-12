@@ -719,7 +719,7 @@
         <p>基于微信视频号运营规范 + 小红书2026规则大全 · 双平台智能审核与优化</p>
       </div>
       <div class="card login-card" id="login-panel">
-        <div class="avatar" style="overflow:hidden;"><img src="avatar-changdao.png" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.style.display='none';this.parentElement.innerHTML='👤'" /></div>
+        <div class="avatar" style="overflow:hidden;"><img src="avatar-v2.png" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.style.display='none';this.parentElement.innerHTML='👤'" /></div>
         <div class="nickname">欢迎使用</div>
         <div class="user-id">请先登录以使用全部功能</div>
         <button class="btn btn-primary" id="btn-login">微信一键登录</button>
@@ -953,7 +953,7 @@
       setTimeout(() => {
         STATE.isLoggedIn = true;
         STATE.token = 'token_' + Math.random().toString(36).substring(2, 20);
-        STATE.userInfo = { nickName: '章导', avatarUrl: 'avatar-changdao.png' };
+        STATE.userInfo = { nickName: '章导', avatarUrl: 'avatar-v2.png' };
 
         const panel = document.getElementById('login-panel');
         panel.innerHTML = `
@@ -979,7 +979,7 @@
 
       const panel = document.getElementById('login-panel');
       panel.innerHTML = `
-        <div class="avatar" style="overflow:hidden;"><img src="avatar-changdao.png" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.style.display='none';this.parentElement.innerHTML='👤'" /></div>
+        <div class="avatar" style="overflow:hidden;"><img src="avatar-v2.png" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.style.display='none';this.parentElement.innerHTML='👤'" /></div>
         <div class="nickname">欢迎使用</div>
         <div class="user-id">请先登录以使用全部功能</div>
         <button class="btn btn-primary" id="btn-login">微信一键登录</button>
